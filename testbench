@@ -1,0 +1,74 @@
+`timescale 1ns / 1ps
+module tb_top;
+
+    // Testbench variables
+    reg clk;
+    reg reset;
+    reg in;
+    wire out;
+    wire clkout;
+    wire [1:0] current_state;
+
+    // Instantiate the top module (which includes clkout)
+    top uut (
+        .clk(clk),
+        .reset(reset),
+        .in(in),
+        .out(out),
+        .clkout(clkout),
+        .current_state(current_state)
+    );
+
+    // Generate clock (period = 20 time units)
+    always #10 clk = ~clk;
+
+    // Stimulus logic
+    initial begin
+        // Initialize signals
+        clk = 0;
+        reset = 1;   // Apply reset
+        in = 0;
+
+        // Start simulation
+        #20 reset = 0;  // Deassert reset
+
+        // Test case 1: Apply sequence "1011"
+        #20 in = 1;    // Input '1'
+        #20 in = 0;    // Input '0'
+        #20 in = 1;    // Input '1'
+        #20 in = 1;    // Input '1', expected: out = 1
+
+        // Test case 2: Mismatched sequence "1101"
+        #20 in = 1;    // Input '1'
+        #20 in = 1;    // Input '1'
+        #20 in = 0;    // Input '0'
+        #20 in = 1;    // Input '1', expected: out = 0
+
+        // Test case 3: Overlapping sequences "1011011"
+        #20 in = 1;    // Input '1'
+        #20 in = 0;    // Input '0'
+        #20 in = 1;    // Input '1'
+        #20 in = 1;    // Input '1', expected: out = 1
+        #20 in = 0;    // Input '0'
+        #20 in = 1;    // Input '1'
+        #20 in = 1;    // Input '1', expected: out = 1 again
+
+        // Test case 4: Reset during operation
+        #20 reset = 1; // Apply reset
+        #20 reset = 0; // Deassert reset
+        #20 in = 1;    // Start new sequence after reset
+        #20 in = 0;
+        #20 in = 1;
+        #20 in = 1;    // Detect "1011" again after reset
+
+        // End simulation
+        #100 $finish;
+    end
+
+    // Monitor signals to observe outputs during simulation
+    initial begin
+        $monitor("Time: %0t | Reset: %b | In: %b | Out: %b | Clkout: %b | State: %b", 
+                 $time, reset, in, out, clkout, current_state);
+    end
+
+endmodule
